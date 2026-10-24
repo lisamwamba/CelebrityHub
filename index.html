@@ -234,8 +234,31 @@
   <footer>© <span id="year"></span> CelebrityHub</footer>
 
   <script>
-    const storageKey = "celebrityHubContent";
+    // --- IndexedDB Setup ---
+    const DB_NAME = "CelebrityHubDB";
+    const DB_VERSION = 1;
+    const STORE_NAME = "contentStore";
+    let db;
 
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = (event) => {
+      console.error("Database error: ", event.target.error);
+    };
+
+    request.onsuccess = (event) => {
+      db = event.target.result;
+      render(); // Load data once DB is ready
+    };
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+      }
+    };
+
+    // --- Helpers ---
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, character => ({
         "&": "&amp;",
@@ -314,85 +337,76 @@
       });
     }
 
-    function readItems() {
-      try {
-        return JSON.parse(localStorage.getItem(storageKey)) || [];
-      } catch {
-        return [];
-      }
-    }
-
+    // --- Render Logic ---
     function render() {
-      const items = readItems();
-      const sections = {
-        news: document.getElementById("news-list"),
-        events: document.getElementById("events-list"),
-        music: document.getElementById("music-list"),
-        videos: document.getElementById("videos-list")
+      if (!db) return;
+
+      const transaction = db.transaction([STORE_NAME], "readonly");
+      const store = transaction.objectStore(STORE_NAME);
+      const getAllRequest = store.getAll();
+
+      getAllRequest.onsuccess = () => {
+        const items = getAllRequest.result.reverse(); // Newest first
+        const sections = {
+          news: document.getElementById("news-list"),
+          events: document.getElementById("events-list"),
+          music: document.getElementById("music-list"),
+          videos: document.getElementById("videos-list")
+        };
+
+        Object.values(sections).forEach(section => section.innerHTML = "");
+        const currentPageUrl = window.location.href;
+
+        for (const item of items) {
+          const card = document.createElement("article");
+          card.className = "card";
+
+          let mediaHtml = "";
+          // If the item has a Blob saved, create a temporary URL for it
+          let mediaUrl = item.fileBlob ? URL.createObjectURL(item.fileBlob) : '';
+
+          if (item.type === "music" && mediaUrl) {
+            mediaHtml = `
+              <audio controls preload="metadata">
+                <source src="${mediaUrl}" type="${escapeHtml(item.fileType || "audio/mpeg")}">
+                Your browser does not support audio playback.
+              </audio>
+              <a class="download" href="${mediaUrl}" download="${escapeHtml(item.fileName || "music.mp3")}">
+                Download after listening
+              </a>`;
+          } else if (item.type === "videos" && mediaUrl) {
+            mediaHtml = `
+              <video controls preload="metadata">
+                <source src="${mediaUrl}" type="${escapeHtml(item.fileType || "video/mp4")}">
+                Your browser does not support video playback.
+              </video>`;
+          }
+
+          const showShare = (item.type === "music" || item.type === "videos") && mediaUrl;
+          const shareHtml = showShare ? createShareBarHtml(item, currentPageUrl) : '';
+
+          card.innerHTML = `
+            <div class="tag">${escapeHtml(item.type.toUpperCase())}</div>
+            <h3>${escapeHtml(item.title)}</h3>
+            <p>${escapeHtml(item.description || "")}</p>
+            ${mediaHtml}
+            ${shareHtml}
+          `;
+          sections[item.type].appendChild(card);
+        }
+
+        for (const section of Object.values(sections)) {
+          if (!section.children.length) {
+            section.innerHTML = '<p class="empty">No content added yet.</p>';
+          }
+        }
+
+        attachShareHandlers();
       };
-
-      Object.values(sections).forEach(section => section.innerHTML = "");
-
-      const currentPageUrl = window.location.href;
-
-      for (const item of items) {
-        const card = document.createElement("article");
-        card.className = "card";
-
-        let mediaHtml = "";
-        // Here we prioritize the saved Data URL to make sure the player is activated
-        const playbackSrc = item.fileDataUrl || item.fileUrl || '';
-        
-        if (item.type === "music" && playbackSrc) {
-          mediaHtml = `
-            <audio controls preload="metadata">
-              <source src="${playbackSrc}" type="${escapeHtml(item.fileType || "audio/mpeg")}">
-              Your browser does not support audio playback.
-            </audio>
-            <a class="download" href="${playbackSrc}" download="${escapeHtml(item.fileName || "music.mp3")}">
-              Download after listening
-            </a>`;
-        } else if (item.type === "videos" && playbackSrc) {
-          mediaHtml = `
-            <video controls preload="metadata">
-              <source src="${playbackSrc}" type="${escapeHtml(item.fileType || "video/mp4")}">
-              Your browser does not support video playback.
-            </video>`;
-        }
-
-        const showShare = (item.type === "music" || item.type === "videos") && playbackSrc;
-        const shareHtml = showShare ? createShareBarHtml(item, currentPageUrl) : '';
-
-        card.innerHTML = `
-          <div class="tag">${escapeHtml(item.type.toUpperCase())}</div>
-          <h3>${escapeHtml(item.title)}</h3>
-          <p>${escapeHtml(item.description || "")}</p>
-          ${mediaHtml}
-          ${shareHtml}
-        `;
-        sections[item.type].appendChild(card);
-      }
-
-      for (const section of Object.values(sections)) {
-        if (!section.children.length) {
-          section.innerHTML = '<p class="empty">No content added yet.</p>';
-        }
-      }
-
-      attachShareHandlers();
     }
 
-    // Converts the file to Base64 (Data URL) so it works forever
-    function fileToDataUrl(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
-
-    document.getElementById("content-form").addEventListener("submit", async (event) => {
+    // --- Form Submit Logic ---
+    document.getElementById("content-form").addEventListener("submit", (event) => {
       event.preventDefault();
 
       const type = document.getElementById("type").value;
@@ -402,37 +416,32 @@
 
       if (!title) return;
 
-      const item = { type, title, description };
+      const item = { 
+        type, 
+        title, 
+        description,
+        fileType: file ? file.type : null,
+        fileName: file ? file.name : null,
+        fileBlob: file ? file : null // Save the raw file directly
+      };
 
-      if (file) {
-        item.fileType = file.type;
-        item.fileName = file.name;
+      // Save to IndexedDB
+      const transaction = db.transaction([STORE_NAME], "readwrite");
+      const store = transaction.objectStore(STORE_NAME);
+      const addRequest = store.add(item);
 
-        try {
-          // Convert file to Base64 Data URL
-          const dataUrl = await fileToDataUrl(file);
-          item.fileDataUrl = dataUrl; 
-        } catch (err) {
-          console.error('Could not read file:', err);
-          alert('Error reading the file. Please try again.');
-          return;
-        }
-      }
+      addRequest.onsuccess = () => {
+        render(); // Refresh the page
+        event.target.reset(); // Clear form
+      };
 
-      const items = readItems();
-      items.unshift(item);
-
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(items));
-        render();
-        event.target.reset();
-      } catch (error) {
-        alert('Could not save content. The file is likely too large for browser storage (Maximum is usually around 5MB). Please use a smaller file.');
-      }
+      addRequest.onerror = (e) => {
+        alert("Error saving content to database.");
+        console.error(e);
+      };
     });
 
     document.getElementById("year").textContent = new Date().getFullYear();
-    render();
   </script>
 </body>
 </html>
