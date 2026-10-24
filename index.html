@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Celebrity Hub · shareable media</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #141c31;
+      --panel-light: #1c2740;
+      --text: #f4f6fb;
+      --muted: #aeb8cd;
+      --accent: #f5b942;
+      --border: #2b3854;
+      --share-bg: #1f2a44;
+      --share-hover: #2e3f62;
+      --facebook: #1877f2;
+      --whatsapp: #25d366;
+      --instagram: #e4405f;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 Arial, sans-serif;
+    }
+    header {
+      padding: 18px 6%;
+      background: #080c18;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .brand { font-size: 1.35rem; font-weight: 800; }
+    .brand span { color: var(--accent); }
+    nav { display: flex; gap: 18px; flex-wrap: wrap; }
+    nav a { color: var(--text); text-decoration: none; }
+    nav a:hover { color: var(--accent); }
+    .hero {
+      padding: 72px 6%;
+      background: linear-gradient(120deg, #1a2744, #11172a);
+    }
+    .hero h1 { font-size: clamp(2.2rem, 5vw, 4rem); margin: 0 0 12px; }
+    .hero p { color: var(--muted); max-width: 650px; }
+    main { width: min(1100px, 88%); margin: 36px auto; }
+    section { margin: 42px 0; }
+    h2 { border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+    .card, .admin-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+    }
+    .card h3 { margin: 8px 0; }
+    .card p, .muted { color: var(--muted); }
+    .tag { color: var(--accent); font-size: .85rem; font-weight: bold; }
+    audio, video { width: 100%; margin-top: 10px; border-radius: 8px; background: #000; }
+    .download, button {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 7px;
+      background: var(--accent);
+      color: #17120a;
+      font-weight: bold;
+      text-decoration: none;
+      cursor: pointer;
+      text-align: center;
+    }
+    button:hover, .download:hover { filter: brightness(1.08); }
+    form { display: grid; gap: 12px; }
+    label { font-weight: bold; }
+    input, textarea, select {
+      width: 100%;
+      padding: 11px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--panel-light);
+      color: var(--text);
+    }
+    input[type="file"] { padding: 8px; }
+    textarea { min-height: 90px; resize: vertical; }
+    footer {
+      padding: 28px 6%;
+      text-align: center;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+    .empty { color: var(--muted); font-style: italic; }
+
+    /* ----- share bar styles ----- */
+    .share-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+      align-items: center;
+    }
+    .share-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-right: 4px;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+    }
+    .share-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 30px;
+      background: var(--share-bg);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      transition: background 0.15s, border-color 0.15s;
+      cursor: pointer;
+    }
+    .share-btn i { font-style: normal; font-size: 1rem; }
+    .share-btn:hover { background: var(--share-hover); border-color: var(--accent); }
+    .share-btn.facebook:hover { background: var(--facebook); border-color: var(--facebook); color: white; }
+    .share-btn.whatsapp:hover { background: var(--whatsapp); border-color: var(--whatsapp); color: #0b1a12; }
+    .share-btn.instagram:hover { background: var(--instagram); border-color: var(--instagram); color: white; }
+
+    .share-feedback {
+      font-size: 0.8rem;
+      color: var(--accent);
+      margin-left: 6px;
+      opacity: 0.9;
+      transition: opacity 0.2s;
+    }
+
+    .file-hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Celebrity<span>Hub</span></div>
+    <nav aria-label="Main navigation">
+      <a href="#news">News</a>
+      <a href="#events">Events</a>
+      <a href="#music">Music</a>
+      <a href="#videos">Videos</a>
+      <a href="#admin">Admin</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1>All the latest from your favorite stars</h1>
+    <p>Discover celebrity news, upcoming events, music releases, videos, and more.</p>
+  </section>
+
+  <main>
+    <section id="news">
+      <h2>Latest News</h2>
+      <div class="grid" id="news-list"></div>
+    </section>
+
+    <section id="events">
+      <h2>Upcoming Events</h2>
+      <div class="grid" id="events-list"></div>
+    </section>
+
+    <section id="music">
+      <h2>Music</h2>
+      <p class="muted">Listen to a track with the player before choosing to download it. Use the share buttons below each track.</p>
+      <div class="grid" id="music-list"></div>
+    </section>
+
+    <section id="videos">
+      <h2>Videos</h2>
+      <div class="grid" id="videos-list"></div>
+    </section>
+
+    <section id="admin">
+      <h2>Administrator: Add Content</h2>
+      <div class="admin-panel">
+        <form id="content-form">
+          <div>
+            <label for="type">Content type</label>
+            <select id="type" required>
+              <option value="news">News</option>
+              <option value="events">Event</option>
+              <option value="music">Music</option>
+              <option value="videos">Video</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="title">Title</label>
+            <input id="title" required maxlength="100" placeholder="Content title">
+          </div>
+
+          <div>
+            <label for="description">Description or event details</label>
+            <textarea id="description" maxlength="1000" placeholder="Write a short description"></textarea>
+          </div>
+
+          <div>
+            <label for="media">Choose an audio or video file (optional)</label>
+            <input id="media" type="file" accept="audio/*,video/*">
+            <div class="file-hint">After adding, share buttons appear on the media card.</div>
+          </div>
+
+          <button type="submit">Add Content</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer>© <span id="year"></span> CelebrityHub</footer>
+
+  <script>
+    const storageKey = "celebrityHubContent";
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      })[character]);
+    }
+
+    function getShareText(item) {
+      const base = `Check out "${item.title}" on CelebrityHub!`;
+      if (item.description) {
+        return `${base} – ${item.description.substring(0, 100)}${item.description.length > 100 ? '…' : ''}`;
+      }
+      return base;
+    }
+
+    function buildShareUrl(platform, item, currentPageUrl) {
+      const text = encodeURIComponent(getShareText(item));
+      const url = encodeURIComponent(currentPageUrl || window.location.href);
+      switch(platform) {
+        case 'facebook':
+          return `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`;
+        case 'whatsapp':
+          return `https://wa.me/?text=${text}%20${url}`;
+        default:
+          return '#';
+      }
+    }
+
+    function createShareBarHtml(item, currentPageUrl) {
+      const text = getShareText(item);
+      const pageUrl = currentPageUrl || window.location.href;
+      const fbUrl = buildShareUrl('facebook', item, pageUrl);
+      const waUrl = buildShareUrl('whatsapp', item, pageUrl);
+      return `
+        <div class="share-bar" data-share-item="${escapeHtml(item.title)}" data-share-text="${escapeHtml(text)}">
+          <span class="share-label">Share:</span>
+          <a class="share-btn facebook" href="${fbUrl}" target="_blank" rel="noopener noreferrer" title="Share on Facebook">
+            <i>📘</i> Facebook
+          </a>
+          <a class="share-btn whatsapp" href="${waUrl}" target="_blank" rel="noopener noreferrer" title="Share on WhatsApp">
+            <i>💬</i> WhatsApp
+          </a>
+          <a class="share-btn instagram" href="#" data-instagram-share="true" title="Copy text & open Instagram">
+            <i>📸</i> Instagram
+          </a>
+          <span class="share-feedback" style="display:none;">copied!</span>
+        </div>
+      `;
+    }
+
+    function instagramShareHandler(e) {
+      e.preventDefault();
+      const shareBar = e.currentTarget.closest('.share-bar');
+      const text = shareBar?.getAttribute('data-share-text') || 'Check out this content on CelebrityHub!';
+      const pageUrl = window.location.href;
+      const fullMessage = `${text} ${pageUrl}`;
+      navigator.clipboard.writeText(fullMessage).then(() => {
+        const feedback = shareBar.querySelector('.share-feedback');
+        if (feedback) {
+          feedback.style.display = 'inline';
+          setTimeout(() => { feedback.style.display = 'none'; }, 2500);
+        }
+        window.open('https://www.instagram.com/', '_blank');
+      }).catch(() => {
+        prompt('Copy this message and share on Instagram:', fullMessage);
+      });
+    }
+
+    function attachShareHandlers() {
+      document.querySelectorAll('[data-instagram-share]').forEach(btn => {
+        btn.removeEventListener('click', instagramShareHandler);
+        btn.addEventListener('click', instagramShareHandler);
+      });
+    }
+
+    function readItems() {
+      try {
+        return JSON.parse(localStorage.getItem(storageKey)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function render() {
+      const items = readItems();
+      const sections = {
+        news: document.getElementById("news-list"),
+        events: document.getElementById("events-list"),
+        music: document.getElementById("music-list"),
+        videos: document.getElementById("videos-list")
+      };
+
+      Object.values(sections).forEach(section => section.innerHTML = "");
+
+      const currentPageUrl = window.location.href;
+
+      for (const item of items) {
+        const card = document.createElement("article");
+        card.className = "card";
+
+        let mediaHtml = "";
+        // Here we prioritize the saved Data URL to make sure the player is activated
+        const playbackSrc = item.fileDataUrl || item.fileUrl || '';
+        
+        if (item.type === "music" && playbackSrc) {
+          mediaHtml = `
+            <audio controls preload="metadata">
+              <source src="${playbackSrc}" type="${escapeHtml(item.fileType || "audio/mpeg")}">
+              Your browser does not support audio playback.
+            </audio>
+            <a class="download" href="${playbackSrc}" download="${escapeHtml(item.fileName || "music.mp3")}">
+              Download after listening
+            </a>`;
+        } else if (item.type === "videos" && playbackSrc) {
+          mediaHtml = `
+            <video controls preload="metadata">
+              <source src="${playbackSrc}" type="${escapeHtml(item.fileType || "video/mp4")}">
+              Your browser does not support video playback.
+            </video>`;
+        }
+
+        const showShare = (item.type === "music" || item.type === "videos") && playbackSrc;
+        const shareHtml = showShare ? createShareBarHtml(item, currentPageUrl) : '';
+
+        card.innerHTML = `
+          <div class="tag">${escapeHtml(item.type.toUpperCase())}</div>
+          <h3>${escapeHtml(item.title)}</h3>
+          <p>${escapeHtml(item.description || "")}</p>
+          ${mediaHtml}
+          ${shareHtml}
+        `;
+        sections[item.type].appendChild(card);
+      }
+
+      for (const section of Object.values(sections)) {
+        if (!section.children.length) {
+          section.innerHTML = '<p class="empty">No content added yet.</p>';
+        }
+      }
+
+      attachShareHandlers();
+    }
+
+    // Converts the file to Base64 (Data URL) so it works forever
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById("content-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const type = document.getElementById("type").value;
+      const title = document.getElementById("title").value.trim();
+      const description = document.getElementById("description").value.trim();
+      const file = document.getElementById("media").files[0];
+
+      if (!title) return;
+
+      const item = { type, title, description };
+
+      if (file) {
+        item.fileType = file.type;
+        item.fileName = file.name;
+
+        try {
+          // Convert file to Base64 Data URL
+          const dataUrl = await fileToDataUrl(file);
+          item.fileDataUrl = dataUrl; 
+        } catch (err) {
+          console.error('Could not read file:', err);
+          alert('Error reading the file. Please try again.');
+          return;
+        }
+      }
+
+      const items = readItems();
+      items.unshift(item);
+
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(items));
+        render();
+        event.target.reset();
+      } catch (error) {
+        alert('Could not save content. The file is likely too large for browser storage (Maximum is usually around 5MB). Please use a smaller file.');
+      }
+    });
+
+    document.getElementById("year").textContent = new Date().getFullYear();
+    render();
+  </script>
+</body>
+</html>
